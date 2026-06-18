@@ -477,11 +477,18 @@ class DataOperationsComponent(Component):
             "Path Selection": self.json_path,
             "JQ Expression": self.json_query,
         }
-        handler: Callable[[], Data] | None = action_map.get(selected_actions[0])
-        if handler:
-            try:
-                return handler()
-            except Exception as e:
-                logger.error(f"Error executing {selected_actions[0]}: {e!s}")
-                raise
-        return Data(data={})
+        action_name = selected_actions[0]
+        handler: Callable[[], Data] | None = action_map.get(action_name)
+        if handler is None:
+            # Fail fast instead of silently returning empty data. Persisted flows
+            # may still reference a removed operation (e.g. "Filter Values").
+            msg = (
+                f"The '{action_name}' operation is no longer supported by the JSON Operations component. "
+                "Update this flow to use the Operations component."
+            )
+            raise ValueError(msg)
+        try:
+            return handler()
+        except Exception as e:
+            logger.error(f"Error executing {action_name}: {e!s}")
+            raise

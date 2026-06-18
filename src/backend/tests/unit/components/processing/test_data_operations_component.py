@@ -207,6 +207,15 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Select Keys operation is not supported for multiple data objects"):
             component.as_data()
 
+    def test_removed_operation_raises_instead_of_returning_empty(self):
+        """A persisted flow referencing the removed 'Filter Values' op fails fast, not silently."""
+        component = DataOperationsComponent(
+            data=Data(data={"items": [{"name": "a"}]}),
+            operations=[{"name": "Filter Values"}],
+        )
+        with pytest.raises(ValueError, match="no longer supported"):
+            component.as_data()
+
     def test_update_build_config_clears_input_fields_when_operation_removed(self):
         """Test that removing the selected operation hides all operation-specific input fields."""
         from lfx.schema.dotdict import dotdict

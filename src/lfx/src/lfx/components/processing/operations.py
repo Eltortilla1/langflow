@@ -84,7 +84,7 @@ TEXT_MESSAGE_OPERATIONS = {
 }
 TEXT_OPERATIONS = TEXT_MESSAGE_OPERATIONS | {"Word Count", "Text to DataFrame"}
 
-# Comparison operators for the Table "Filter" operation.
+# Case conversions for the Text "Case Conversion" operation.
 CASE_CONVERTERS: dict[str, Any] = {
     "uppercase": str.upper,
     "lowercase": str.lower,
@@ -92,6 +92,21 @@ CASE_CONVERTERS: dict[str, Any] = {
     "capitalize": str.capitalize,
     "swapcase": str.swapcase,
 }
+
+# Default outputs — one per data type. They make the component advertise all
+# three output types (Data / DataFrame / Message) so it shows up in
+# connection-based sidebar filtering before an operation is selected.
+# update_outputs() narrows these to the single output matching the operation.
+_DEFAULT_OUTPUT_SPECS = (
+    ("JSON", "data_output", "as_data"),
+    ("Table", "dataframe_output", "as_dataframe"),
+    ("Message", "message_output", "as_message"),
+)
+
+
+def _default_operations_outputs() -> list[Output]:
+    """Build a fresh list of the default outputs (avoids sharing mutable instances)."""
+    return [Output(display_name=display, name=name, method=method) for display, name, method in _DEFAULT_OUTPUT_SPECS]
 
 
 class OperationsComponent(Component):
@@ -644,8 +659,9 @@ class OperationsComponent(Component):
         ),
     ]
 
-    # Outputs are dynamic — populated by update_outputs based on the operation.
-    outputs: list[Output] = []
+    # Default to one output per data type so the component is connectable from
+    # the sidebar before an operation is chosen; update_outputs narrows them.
+    outputs = _default_operations_outputs()
 
     # ------------------------------------------------------------------
     # Operation routing helpers
@@ -737,11 +753,13 @@ class OperationsComponent(Component):
         if field_name != "operation":
             return frontend_node
 
-        frontend_node["outputs"] = []
         operation = self._extract_operation_name(field_value)
         if not operation:
+            # No operation selected: advertise all three output types again.
+            frontend_node["outputs"] = _default_operations_outputs()
             return frontend_node
 
+        frontend_node["outputs"] = []
         if operation in JSON_OPERATIONS or operation == "Word Count":
             frontend_node["outputs"].append(Output(display_name="JSON", name="data_output", method="as_data"))
         elif operation in TABLE_OPERATIONS or operation == "Text to DataFrame":
@@ -925,10 +943,6 @@ class OperationsComponent(Component):
         logger.info("combining data")
         if not self.data_is_list():
             return self.data[0] if self.data else Data(data={})
-
-        if len(self.data) == 1:
-            msg = "Combine operation requires multiple data inputs."
-            raise ValueError(msg)
 
         data_dicts = [data.model_dump().get("data", data.model_dump()) for data in self.data]
         combined_data: dict[str, Any] = {}
@@ -1352,7 +1366,9 @@ class OperationsComponent(Component):
     def _text_clean(self, text: str) -> str:
         result = text
         if getattr(self, "remove_extra_spaces", True):
-            result = re.sub(r"\s+", " ", result)
+            # Collapse runs of horizontal whitespace but preserve newlines so
+            # that remove_empty_lines stays effective when both are enabled.
+            result = re.sub(r"[^\S\n]+", " ", result)
         if getattr(self, "remove_special_chars", False):
             result = re.sub(r"[^\w\s]", "", result)
         if getattr(self, "remove_empty_lines", False):

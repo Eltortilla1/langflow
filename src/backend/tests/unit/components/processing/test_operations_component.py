@@ -281,6 +281,16 @@ class TestTextOperations:
         )
         assert component.as_message().text == "hello world"
 
+    def test_text_clean_spaces_and_empty_lines_together(self):
+        """remove_extra_spaces must preserve newlines so remove_empty_lines stays effective."""
+        component = OperationsComponent(
+            text_input="line1  with   spaces\n\n\nline2",
+            operation=[{"name": "Text Clean"}],
+            remove_extra_spaces=True,
+            remove_empty_lines=True,
+        )
+        assert component.as_message().text == "line1 with spaces\nline2"
+
 
 class TestDynamicInputs:
     """update_build_config surfaces only the input matching the operation's type."""
@@ -387,10 +397,16 @@ class TestDynamicOutputs:
         outputs = self._outputs_for("Text Join")
         assert [o.name for o in outputs] == ["text_output", "message_output"]
 
-    def test_no_operation_emits_no_outputs(self):
+    def test_no_operation_emits_all_default_outputs(self):
+        """With no operation selected the component advertises all three output types."""
         component = OperationsComponent()
         result = component.update_outputs({"outputs": []}, "operation", [])
-        assert result["outputs"] == []
+        assert [o.name for o in result["outputs"]] == ["data_output", "dataframe_output", "message_output"]
+
+    def test_default_outputs_cover_all_types(self):
+        """The class default outputs make the component connectable before configuration."""
+        names = [o.name for o in OperationsComponent.outputs]
+        assert names == ["data_output", "dataframe_output", "message_output"]
 
 
 if __name__ == "__main__":

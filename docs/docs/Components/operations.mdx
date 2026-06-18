@@ -32,7 +32,8 @@ Connect the matching input to the component that produces that data type.
 
 ## Available operations
 
-The **Operation** field groups operations by the data type they act on.
+The **Operation** field is a single flat list of every operation across all three data types.
+The operations are grouped below by the data type they act on for reference.
 Selecting an operation reveals the input and fields it needs.
 
 ### JSON operations
@@ -92,4 +93,4 @@ The **Operations** component's inputs and outputs are dynamic: they change based
 
 The main inputs are **JSON**, **Table**, and **Text**. When no operation is selected, all three are available so you can pre-wire the component. After you choose an operation, only the input for that operation's data type remains.
 
-The output type matches the selected operation: `JSON`, `Table`, or `Message`, as listed in [Available operations](#available-operations).
+The output type matches the selected operation — `JSON`, `Table`, or `Message` (with **Text Join** producing both `Text` and `Message`) — as listed in [Available operations](#available-operations).
