@@ -27,6 +27,20 @@ export interface AutoLoginErrorResponse {
   };
 }
 
+/**
+ * Returns true when the backend explicitly signals that auto-login is
+ * disabled, so the hook knows not to schedule a retry.
+ *
+ * FastAPI wraps HTTP error payloads under `detail`, so we check that path
+ * first. The top-level `auto_login` field is kept as a fallback for
+ * forward-compatibility in case the shape ever changes.
+ */
+export function isAutoLoginDisabled(
+  data: AutoLoginErrorResponse | undefined,
+): boolean {
+  return data?.detail?.auto_login === false || data?.auto_login === false;
+}
+
 export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   options,
 ) => {
@@ -61,12 +75,9 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
       const error = e as AxiosError<AutoLoginErrorResponse>;
       if (error.name !== "CanceledError") {
         setAutoLogin(false);
-        // Don't retry if backend explicitly says auto-login is disabled.
-        // FastAPI wraps error details under `detail`, so check both the
-        // top-level field (future-proofing) and the nested one.
-        const autoLoginDisabledByBackend =
-          error.response?.data?.detail?.auto_login === false ||
-          error.response?.data?.auto_login === false;
+        const autoLoginDisabledByBackend = isAutoLoginDisabled(
+          error.response?.data,
+        );
         if (!isLoginPage && !autoLoginDisabledByBackend) {
           await handleAutoLoginError();
         }
