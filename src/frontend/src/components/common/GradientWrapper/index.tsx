@@ -9,6 +9,7 @@ export function GradientWrapper({ children }: { children: ReactNode }) {
         className="absolute"
         aria-hidden="true"
         focusable="false"
+        role="presentation"
       >
         <defs>
           <linearGradient id="x-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
