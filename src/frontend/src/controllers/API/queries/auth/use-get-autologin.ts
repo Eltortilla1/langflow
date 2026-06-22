@@ -21,6 +21,10 @@ export interface AutoLoginResponse {
 
 export interface AutoLoginErrorResponse {
   auto_login?: boolean;
+  detail?: {
+    auto_login?: boolean;
+    message?: string;
+  };
 }
 
 export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
@@ -57,8 +61,11 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
       const error = e as AxiosError<AutoLoginErrorResponse>;
       if (error.name !== "CanceledError") {
         setAutoLogin(false);
-        // Don't retry if backend explicitly says auto-login is disabled
+        // Don't retry if backend explicitly says auto-login is disabled.
+        // FastAPI wraps error details under `detail`, so check both the
+        // top-level field (future-proofing) and the nested one.
         const autoLoginDisabledByBackend =
+          error.response?.data?.detail?.auto_login === false ||
           error.response?.data?.auto_login === false;
         if (!isLoginPage && !autoLoginDisabledByBackend) {
           await handleAutoLoginError();
